@@ -5,8 +5,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +26,10 @@ public class AdminController {
 
     private final Instant serverStart = Instant.now();
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false); 
+    private final ApplicationContext context;
+    public AdminController(ApplicationContext applicationContext) {
+        this.context = applicationContext;
+    }
     //prevent concurrent shutdown requests
     
     @GetMapping("/uptime")
@@ -50,6 +57,30 @@ public class AdminController {
 
             return ResponseEntity.status(409).body(conflict);
         }
+        
+     //Run the shutdown logic asynchronously so the current thread is not blocked.
+        CompletableFuture.runAsync(() -> {
+
+            try {
+            	//Allow the HTTP/202 response 500ms to be sent to the client.
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                //Restore the interrupted status and stop the shutdown task.
+                Thread.currentThread().interrupt();
+                return;
+            }
+
+            //Close Spring application context and return exit code 0.
+            int exitCode =
+                    SpringApplication.exit(
+                            context,
+                            () -> 0
+                    );
+
+            //Use exit code to terminate JVM
+            System.exit(exitCode);
+        });
+
         
         return ResponseEntity
                 .accepted()
