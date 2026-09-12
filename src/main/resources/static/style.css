@@ -1,0 +1,46 @@
+body {
+    font-family: system-ui, sans-serif;
+    max-width: 480px;
+    margin: 4rem auto;
+    text-align: center;
+}
+
+#recordBtn {
+    font-size: 1.2rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+}
+
+#recordBtn.recording {
+    background: #dc2626;
+    animation: pulse 1.2s infinite;
+}
+
+#recordBtn.processing {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+#status {
+    margin-top: 1rem;
+    color: #374151;
+}
+
+#transcript {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+}
