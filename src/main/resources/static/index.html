@@ -4,14 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Speech to Text</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+    <main>
 
-    <h1>Speech to Text - Testing</h1>
+        <h1>Speech to Text</h1>
+        <button id="recordBtn" aria-pressed="false">
+            Start Recording
+        </button>
+        <p id="status" role="status">
+            Ready to record.
+        </p>
 
-    <p>Recording UI will be added later.</p>
+        <div id="transcript" aria-live="polite"></div>
+
+    </main>
+
+    <script src="script.js"></script>
 
 </body>
-
 </html>
