@@ -107,7 +107,7 @@ function setState(state) {
     statusEl.textContent = 'Processing transcription...';
   } else {
     //Reset the UI when ready to record again
-    recordBtn.textContent = '🎤 Start Recording';
+    recordBtn.textContent = 'Start Recording';
     recordBtn.setAttribute('aria-pressed', 'false');
   }
 }
