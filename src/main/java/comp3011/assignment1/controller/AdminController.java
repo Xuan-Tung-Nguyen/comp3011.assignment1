@@ -5,17 +5,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ApplicationContext;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import comp3011.assignment1.dto.ErrorResponse;
 import comp3011.assignment1.dto.UptimeResponse;
+import comp3011.assignment1.service.ShutdownExecutor;
 import comp3011.assignment1.dto.ShutDownResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -26,12 +25,14 @@ public class AdminController {
 
     private final Instant serverStart = Instant.now();
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false); 
-    private final ApplicationContext context;
-    public AdminController(ApplicationContext applicationContext) {
-        this.context = applicationContext;
+    private final ShutdownExecutor shutdownExecutor; //replace depending on ApplicationContext to interface ShutdownExecutor
+    public AdminController(
+            ShutdownExecutor shutdownExecutor) {
+    	this.shutdownExecutor = shutdownExecutor;
     }
     //prevent concurrent shutdown requests
     
+    //Give information about how long the server has been running by calculate utcServerStart, utcNow, and serverUptimeSeconds
     @GetMapping("/uptime")
     public UptimeResponse getUptime() {
         Instant now = Instant.now();
@@ -40,10 +41,12 @@ public class AdminController {
         
     }
     
+    //request a graceful shutdown of the server
     @PostMapping("/shutdown")
     public ResponseEntity<?> shutdown(
             HttpServletRequest request) {
 
+    	//Only allow the first shutdown request to proceed
         if (!shuttingDown.compareAndSet(false, true)) {
 
             ErrorResponse conflict =
@@ -58,30 +61,10 @@ public class AdminController {
             return ResponseEntity.status(409).body(conflict);
         }
         
-     //Run the shutdown logic asynchronously so the current thread is not blocked.
-        CompletableFuture.runAsync(() -> {
+     // Delegate shutdown so the controller remains testable
+        shutdownExecutor.initiateShutdown();
 
-            try {
-            	//Allow the HTTP/202 response 500ms to be sent to the client.
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                //Restore the interrupted status and stop the shutdown task.
-                Thread.currentThread().interrupt();
-                return;
-            }
-
-            //Close Spring application context and return exit code 0.
-            int exitCode =
-                    SpringApplication.exit(
-                            context,
-                            () -> 0
-                    );
-
-            //Use exit code to terminate JVM
-            System.exit(exitCode);
-        });
-
-        
+        //Return shutdown response immdediately while shutdown happens asynchronously
         return ResponseEntity
                 .accepted()
                 .body(
