@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import comp3011.assignment1.dto.ErrorResponse;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 //Handling unexpected controller exceptions
 //Prevents using multiple try catch inside every controller.
@@ -32,6 +33,25 @@ public class ApiExceptionHandler {
 
         return ResponseEntity
                 .status(500)
+                .body(body);
+    }
+    
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableRequest(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse body =
+                new ErrorResponse(
+                        Instant.now().toString(),
+                        400,
+                        "Bad Request",
+                        "Request body is missing or invalid.",
+                        request.getRequestURI()
+                );
+
+        return ResponseEntity
+                .status(400)
                 .body(body);
     }
 }

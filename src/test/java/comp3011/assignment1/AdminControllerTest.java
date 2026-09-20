@@ -17,9 +17,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import comp3011.assignment1.controller.AdminController;
 import comp3011.assignment1.service.ShutdownExecutor;
+import org.springframework.test.annotation.DirtiesContext;
 
 //Tests uptime and shutdown endpoints, including repeated shutdown requests and unexpected errors
 @WebMvcTest(AdminController.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AdminControllerTest {
 
     @Autowired MockMvc mockMvc;

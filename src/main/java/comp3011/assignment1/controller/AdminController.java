@@ -24,7 +24,7 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AdminController {
 
     private final Instant serverStart = Instant.now();
-    private final AtomicBoolean shuttingDown = new AtomicBoolean(false); 
+    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final ShutdownExecutor shutdownExecutor; //replace depending on ApplicationContext to interface ShutdownExecutor
     public AdminController(
             ShutdownExecutor shutdownExecutor) {
@@ -61,7 +61,7 @@ public class AdminController {
             return ResponseEntity.status(409).body(conflict);
         }
         
-     // Delegate shutdown so the controller remains testable
+        // Delegate shutdown so the controller remains testable
         shutdownExecutor.initiateShutdown();
 
         //Return shutdown response immdediately while shutdown happens asynchronously
