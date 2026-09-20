@@ -1,28 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Speech to Text</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Speech to Text</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <main>
-
-        <h1>Speech to Text</h1>
-        <button id="recordBtn" aria-pressed="false">
-            Start Recording
-        </button>
-        <p id="status" role="status">
-            Ready to record.
-        </p>
-
-        <div id="transcript" aria-live="polite"></div>
-
-    </main>
-
-    <script src="script.js"></script>
-
+  <main>
+    <h1>Speech to Text</h1>
+    <p id="status" role="status">Ready to record.</p>
+    <p id="timer" aria-hidden="true">00:00</p>
+    <div class="controls">
+      <button id="recordBtn" aria-pressed="false">Start Recording</button>
+      <button id="pauseResumeBtn" hidden>⏸ Pause</button>
+      <button id="finishBtn" hidden>Stop</button>
+    </div>
+    <div id="transcript" aria-live="polite"></div>
+  </main>
+  <script src="script.js"></script>
 </body>
 </html>
