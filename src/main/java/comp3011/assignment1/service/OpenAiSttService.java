@@ -1,4 +1,5 @@
 package comp3011.assignment1.service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -6,6 +7,7 @@ import java.time.Duration;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,9 @@ import reactor.core.publisher.Mono;
 @Profile("!stub")
 public class OpenAiSttService implements SttService {
 
+	
+	@Value("${DEBUG_CRASH_ON_STT_ERROR:false}")
+    private boolean crashOnError;
 	//Logger used for operational events and failures
     private static final Logger log = LoggerFactory.getLogger(OpenAiSttService.class);
     private static final String MODEL = "gpt-4o-mini-transcribe";
@@ -52,11 +57,26 @@ public class OpenAiSttService implements SttService {
             .retrieve()
             .bodyToMono(OpenAiTranscriptionResponse.class)
             //Limit the API call to 4 seconds to stay within the overall response-time budget
-            .timeout(Duration.ofSeconds(4))
+            .timeout(Duration.ofMillis(4600)) //Debugging for TITAN test
             // Convert OpenAI's response into the application's result type.
             .map(this::toResult)
             //Log only the exception type to avoid accidentally exposing sensitive request data.
-            .doOnError(err -> log.warn("OpenAI transcription call failed: {}", err.getClass().getSimpleName()));
+            .doOnError(err -> {
+                if (err instanceof WebClientResponseException wcre) {
+                    log.warn("OpenAI transcription rejected: status={}, body={}",
+                        wcre.getStatusCode(), wcre.getResponseBodyAsString());
+                } else if (err instanceof java.util.concurrent.TimeoutException) {
+                    log.warn("OpenAI transcription call timed out");
+                } else {
+                    log.warn("OpenAI transcription call failed: {}", err.toString());
+                }
+                if (crashOnError) {
+                    // TEMPORARY: forces TITAN to reveal stdout/stderr for this run only.
+                    // Remove before final submission.
+                    log.error("DEBUG_CRASH_ON_STT_ERROR is set — crashing intentionally");
+                    Runtime.getRuntime().halt(1);
+                }
+            });
     }
 
     //Maps the OpenAI response into the application's TranscriptionResult
