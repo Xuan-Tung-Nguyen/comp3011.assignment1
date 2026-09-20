@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import comp3011.assignment1.controller.AdminController;
 import comp3011.assignment1.service.ShutdownExecutor;
+import comp3011.assignment1.service.ShutdownService;
+
 import org.springframework.test.annotation.DirtiesContext;
 
 //Tests uptime and shutdown endpoints, including repeated shutdown requests and unexpected errors
@@ -25,9 +28,9 @@ import org.springframework.test.annotation.DirtiesContext;
 class AdminControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @MockitoBean ShutdownExecutor shutdownExecutor;
+    @MockitoBean ShutdownService shutdownService;
 
-    //Testing uptime behaviour
+    //Verifies the uptime endpoint returns a successful response with the expected fields.
     @Test
     void uptimeReturnsWellFormedTimestamps() throws Exception {
         mockMvc.perform(get("/api/v1/admin/uptime"))
@@ -37,34 +40,36 @@ class AdminControllerTest {
             .andExpect(jsonPath("$.serverUptimeSeconds").isNumber());
     }
 
-    //Testing if controller actually called shutdown
+    //Verifies a shutdown request is accepted when no shutdown is already in progress.
     @Test
-    void firstShutdownRequestIsAcceptedAndDelegatesToExecutor() throws Exception {
+    void acceptedShutdownRequestReturns202() throws Exception {
+        when(shutdownService.requestShutdown()).thenReturn(true);
+
         mockMvc.perform(post("/api/v1/admin/shutdown"))
             .andExpect(status().isAccepted())
             .andExpect(jsonPath("$.message").value("Graceful shutdown requested."));
 
-        verify(shutdownExecutor, times(1)).initiateShutdown();
+        verify(shutdownService).requestShutdown();
     }
-    
-    //Testing if it prevents the duplicate shutdown requests
+
+    //Verifies a second shutdown request returns 409 Conflict with the required error format.
     @Test
-    void secondShutdownRequestReturnsConflictAndDoesNotDoubleTrigger() throws Exception {
-        mockMvc.perform(post("/api/v1/admin/shutdown")).andExpect(status().isAccepted());
+    void shutdownAlreadyInProgressReturns409WithSpecErrorShape() throws Exception {
+        when(shutdownService.requestShutdown()).thenReturn(false);
 
         mockMvc.perform(post("/api/v1/admin/shutdown"))
             .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.timestamp").exists())
             .andExpect(jsonPath("$.status").value(409))
             .andExpect(jsonPath("$.error").value("Conflict"))
+            .andExpect(jsonPath("$.message").value("Graceful shutdown is already in progress."))
             .andExpect(jsonPath("$.path").value("/api/v1/admin/shutdown"));
-
-        verify(shutdownExecutor, times(1)).initiateShutdown(); // never called twice
     }
 
-    //Testing unexpected exception by throwing response without exposing it
+    //Verifies unexpected service failures return a standard 500 Internal Server Error response.
     @Test
-    void unexpectedFailureDuringShutdownReturnsStandardErrorShape() throws Exception {
-        doThrow(new RuntimeException("boom")).when(shutdownExecutor).initiateShutdown();
+    void unexpectedFailureReturnsStandardErrorShape() throws Exception {
+        when(shutdownService.requestShutdown()).thenThrow(new RuntimeException("boom"));
 
         mockMvc.perform(post("/api/v1/admin/shutdown"))
             .andExpect(status().isInternalServerError())
